@@ -59,9 +59,10 @@
   </details>
   <details>
     <summary>About this model</summary>
-    <p>Starting point: Supra2-100M (Qwen3 architecture, 12 layers, 32k vocabulary). Continued pretraining in four
+    <p>Starting point: Supra2-100M (Qwen3 architecture, 12 layers, 32k vocabulary). Continued pretraining in five
     phases: Rust code + RFCs at 8k context, a 64k-context phase, a mixed phase with Stack Exchange math/physics,
-    OpenStax textbooks, fd.io VPP C and more Rust, and a short 64k refresh. It stays stable over long inputs but
+    OpenStax textbooks, fd.io VPP C and more Rust, a short 64k refresh, and a final run that mixes 8k and 64k
+    windows (this model). It stays stable over long inputs but
     reliably recalls only roughly the last 8k tokens. Weights here are 8-bit (q8_0) GGUF, run with
     <a href="https://github.com/ngxson/wllama">wllama</a> (llama.cpp in WebAssembly). Context in this page: 8192 tokens.</p>
   </details>
@@ -91,7 +92,7 @@ if (window.__forceCompat) { try { WebAssembly.Suspending = undefined; } catch (e
 import { Wllama } from './esm/index.js?v=p4c';
 
 // Split with llama-gguf-split (GitHub refuses files over 100 MB); wllama finds the second part from the first's name.
-const MODEL = new URL('./model/supra-rust-phase4-q8_0-00001-of-00002.gguf', location.href).href;
+const MODEL = new URL('./model/supra-rust-phase5-q8_0-00001-of-00002.gguf', location.href).href;
 // The real size of both parts. GitHub Pages sends them gzipped and reports the compressed length, so wllama's own
 // "total" is too small (that showed as 103%); progress is measured against this instead.
 const MODEL_BYTES = 61152544 + 47055968;
