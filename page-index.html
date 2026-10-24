@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Supra-Rust 100M</title>
+<style>
+  :root { --bg: #fbfaf7; --fg: #1d1d1b; --muted: #6b6a66; --line: #dcd9d2; --accent: #a5481f; --box: #ffffff; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg: #171716; --fg: #e9e7e2; --muted: #9a9892; --line: #34332f; --accent: #e08a5c; --box: #1f1f1d; }
+  }
+  :root[data-theme="dark"] { --bg: #171716; --fg: #e9e7e2; --muted: #9a9892; --line: #34332f; --accent: #e08a5c; --box: #1f1f1d; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.5 system-ui, sans-serif; }
+  main { max-width: 860px; margin: 0 auto; padding: 20px 16px 48px; }
+  h1 { font-size: 1.4rem; margin: 0 0 4px; }
+  p.sub { color: var(--muted); margin: 0 0 16px; }
+  textarea { width: 100%; min-height: 220px; padding: 12px; border: 1px solid var(--line); border-radius: 8px;
+             background: var(--box); color: var(--fg); font: 14px/1.45 ui-monospace, Menlo, monospace; resize: vertical; }
+  .row { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; margin: 12px 0; }
+  label { color: var(--muted); font-size: 0.9rem; }
+  input[type=number] { width: 5.5em; padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--box); color: var(--fg); }
+  button { padding: 8px 16px; border-radius: 8px; border: 1px solid var(--accent); background: var(--accent); color: #fff; font-weight: 600; cursor: pointer; }
+  button.ghost { background: transparent; color: var(--accent); }
+  button:disabled { opacity: 0.45; cursor: default; }
+  #status { color: var(--muted); font-size: 0.9rem; min-height: 1.5em; }
+  .ex { display: flex; flex-wrap: wrap; gap: 8px; }
+  .gen { color: var(--accent); }
+  #out { white-space: pre-wrap; word-break: break-word; padding: 12px; border: 1px solid var(--line); border-radius: 8px;
+         background: var(--box); font: 14px/1.45 ui-monospace, Menlo, monospace; min-height: 120px; }
+  details { margin-top: 24px; color: var(--muted); font-size: 0.92rem; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Supra-Rust 100M</h1>
+  <p class="sub">A 100M-parameter base model, further trained on Rust, RFCs, C, math and physics. It runs entirely in your
+  browser: the model (~108 MB) is downloaded once, nothing is sent anywhere. It is a <b>base model</b>: it continues
+  text, it does not answer questions. Start something and let it finish.</p>
+
+  <div class="ex" id="examples"></div>
+  <div class="row"></div>
+  <textarea id="prompt" spellcheck="false"></textarea>
+  <div class="row">
+    <button id="load">Load model (108 MB)</button>
+    <button id="run" disabled>Continue</button>
+    <button id="stop" class="ghost" disabled>Stop</button>
+    <label>tokens <input id="ntok" type="number" value="200" min="1" max="2000"></label>
+    <label>temperature <input id="temp" type="number" value="0.6" min="0" max="2" step="0.1"></label>
+    <label>top-k <input id="topk" type="number" value="40" min="0" max="200"></label>
+  </div>
+  <div id="status">The model is not downloaded yet. Press "Load model" (108 MB, once; later visits use the browser's copy).</div>
+  <div id="out"></div>
+
+  <details id="logbox">
+    <summary>Log (for troubleshooting)</summary>
+    <pre id="log" style="white-space:pre-wrap;font-size:12px;margin:8px 0 0"></pre>
+  </details>
+  <details>
+    <summary>About this model</summary>
+    <p>Starting point: Supra2-100M (Qwen3 architecture, 12 layers, 32k vocabulary). Continued pretraining in four
+    phases: Rust code + RFCs at 8k context, a 64k-context phase, a mixed phase with Stack Exchange math/physics,
+    OpenStax textbooks, fd.io VPP C and more Rust, and a short 64k refresh. It stays stable over long inputs but
+    reliably recalls only roughly the last 8k tokens. Weights here are 8-bit (q8_0) GGUF, run with
+    <a href="https://github.com/ngxson/wllama">wllama</a> (llama.cpp in WebAssembly). Context in this page: 8192 tokens.</p>
+  </details>
+  <details>
+    <summary>Credits and licenses</summary>
+    <p>Base model: <a href="https://huggingface.co/SupraLabs/Supra2-100M-Instruct">SupraLabs/Supra2-100M-Instruct</a> (Apache-2.0).
+    Training data: Rust files from <a href="https://huggingface.co/datasets/codeparrot/github-code">codeparrot/github-code</a>
+    (mixed licenses, not filtered) and public Rust repositories of the author's GitHub mirror; IETF RFCs;
+    <a href="https://github.com/FDio/vpp">fd.io VPP</a> C sources (Apache-2.0);
+    <a href="https://openstax.org">OpenStax</a> math, physics and statistics textbooks (CC BY 4.0);
+    questions and answers from math, physics, stats, MathOverflow, cs, cstheory, scicomp, astronomy and network engineering
+    <a href="https://stackexchange.com">Stack Exchange</a> sites (Dec 2023 data dump, CC BY-SA, by their respective authors).
+    Runtime: <a href="https://github.com/ngxson/wllama">wllama</a> 3.8.1 (MIT), built on
+    <a href="https://github.com/ggml-org/llama.cpp">llama.cpp</a> (MIT).</p>
+  </details>
+</main>
+<script>
+// Test switch ?compat=1: hide JSPI so wllama takes its Safari path (the compat build) even in Chrome/Firefox.
+if (new URLSearchParams(location.search).get('compat') === '1') { try { WebAssembly.Suspending = undefined; } catch (e) {} }
+</script>
+<script type="module">
+import { Wllama } from './esm/index.js?v=p4b';
+
+// Split with llama-gguf-split (GitHub refuses files over 100 MB); wllama finds the second part from the first's name.
+const MODEL = new URL('./model/supra-rust-phase4-q8_0-00001-of-00002.gguf', location.href).href;
+// The real size of both parts. GitHub Pages sends them gzipped and reports the compressed length, so wllama's own
+// "total" is too small (that showed as 103%); progress is measured against this instead.
+const MODEL_BYTES = 61152544 + 47055968;
+const params = new URLSearchParams(location.search);  // test switches: ?compat=1 (force the Safari build), ?nocache=1
+const EXAMPLES = {
+  'Rust function': '/// Parse a dotted-quad IPv4 address like "192.168.1.1" into its four octets.\n/// Returns None if the input is not valid.\npub fn parse_ipv4(s: &str) -> Option<[u8; 4]> {\n',
+  'Rust trait': 'use std::collections::HashMap;\n\n/// A simple in-memory key-value store with a time-to-live per entry.\npub struct TtlCache<V> {\n',
+  'RFC': 'Network Working Group\nRequest for Comments: 9999\nCategory: Standards Track\n\n1.  Introduction\n\n   This document specifies',
+  'Math Q&A': 'Title: Why is the sum of the first n odd numbers a perfect square?\nTags: <elementary-number-theory>\nSite: math.stackexchange.com\nQuestion: I noticed that 1 + 3 + 5 + 7 = 16. Why does this always work?\nAnswer (accepted, score 42): ',
+  'VPP C': '/*\n * Copyright (c) 2026 Cisco and/or its affiliates.\n * Licensed under the Apache License, Version 2.0\n */\n\n#include <vnet/vnet.h>\n#include <vnet/ip/ip.h>\n\nstatic uword\n',
+};
+
+const $ = (id) => document.getElementById(id);
+const status = (s) => { $('status').textContent = s; };
+const exBox = $('examples');
+for (const [name, text] of Object.entries(EXAMPLES)) {
+  const b = document.createElement('button');
+  b.className = 'ghost'; b.textContent = name;
+  b.onclick = () => { $('prompt').value = text; };
+  exBox.appendChild(b);
+}
+$('prompt').value = EXAMPLES['Rust function'];
+
+const t00 = performance.now();
+const log = (...x) => {
+  const line = `${((performance.now() - t00) / 1000).toFixed(1)}s ${x.map(v => (v && v.message) ? v.message : String(v)).join(' ')}`;
+  $('log').textContent += line + '\n';
+};
+const logger = { debug: () => {}, log: (...x) => log(...x), info: (...x) => log(...x), warn: (...x) => log('WARN', ...x), error: (...x) => log('ERROR', ...x) };
+addEventListener('error', (e) => log('ERROR (page)', e.message));
+addEventListener('unhandledrejection', (e) => log('ERROR (promise)', e.reason));
+const mem64 = (() => { try { new WebAssembly.Memory({ address: 'i64', initial: 1n }); return true; } catch { return false; } })();
+log(`browser: ${navigator.userAgent}`);
+log(`JSPI ${!!WebAssembly.Suspending}, memory64 ${mem64}, crossOriginIsolated ${self.crossOriginIsolated}, cores ${navigator.hardwareConcurrency}`);
+
+const wllama = new Wllama({ default: './esm/wasm/wllama.wasm?v=p4b' }, { logger });
+if (params.get('compat') === '1') { wllama.setCompat('default', 'firefox_safari'); log('compat build forced (?compat=1, JSPI hidden)'); }
+if (params.get('clear') === '1') { await wllama.cacheManager.clear(); log('model cache cleared (?clear=1)'); }
+let abort = null;
+
+$('load').onclick = async () => {
+  $('load').disabled = true;
+  let shownPrep = false;
+  log('load start, cache ' + (params.get('nocache') === '1' ? 'off' : 'on'));
+  try {
+    await wllama.loadModelFromUrl(MODEL, {
+      n_ctx: 8192,
+      useCache: params.get('nocache') !== '1',
+      progressCallback: ({ loaded }) => {
+        const pct = Math.min(100, Math.round(100 * loaded / MODEL_BYTES));
+        if (pct < 100) status(`Downloading model… ${pct}% of ${(MODEL_BYTES / 1e6).toFixed(0)} MB`);
+        else if (!shownPrep) { shownPrep = true; log('download complete'); status('Preparing the model in memory… (this can take a while on a phone)'); }
+      },
+    });
+    log('model ready');
+    status('Ready. Pick an example or write something, then press Continue.');
+    $('load').textContent = 'Model loaded'; $('run').disabled = false;
+  } catch (e) {
+    log('ERROR load failed:', e);
+    status('Could not load the model: ' + (e && e.message ? e.message : e) + ' (see Log below)');
+    $('logbox').open = true; $('load').disabled = false;
+  }
+};
+
+$('run').onclick = async () => {
+  const prompt = $('prompt').value;
+  const out = $('out');
+  out.textContent = '';
+  const p = document.createElement('span'); p.textContent = prompt; out.appendChild(p);
+  const g = document.createElement('span'); g.className = 'gen'; out.appendChild(g);
+  $('run').disabled = true; $('stop').disabled = false;
+  abort = new AbortController();
+  const t0 = performance.now(); let n = 0;
+  status('Generating…');
+  try {
+    await wllama.createCompletion({
+      // Training packed documents as "doc </s> doc </s> ...", so a document start is "right after </s>".
+      // Without it the 64k-phase checkpoint degenerates on short prompts (it repeats the prompt, then "####").
+      prompt: '</s>' + prompt,
+      max_tokens: Math.max(1, Math.min(2000, parseInt($('ntok').value) || 200)),
+      temperature: Math.max(0, parseFloat($('temp').value) || 0),
+      top_k: Math.max(0, parseInt($('topk').value) || 0),
+      top_p: 0.95,
+      stream: true,
+      abortSignal: abort.signal,
+      onData: (chunk) => {
+        g.textContent += chunk.choices[0].text; n++;
+        status(`Generating… ${n} tokens, ${(n / ((performance.now() - t0) / 1000)).toFixed(1)} tok/s`);
+      },
+    });
+    status(`Done: ${n} tokens in ${((performance.now() - t0) / 1000).toFixed(1)} s.`);
+  } catch (e) {
+    if (abort.signal.aborted) status(`Stopped after ${n} tokens.`);
+    else status('Error: ' + (e && e.message ? e.message : e));
+  }
+  $('run').disabled = false; $('stop').disabled = true;
+};
+$('stop').onclick = () => { if (abort) abort.abort(); };
+</script>
+</body>
+</html>
