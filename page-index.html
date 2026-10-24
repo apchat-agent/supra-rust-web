@@ -78,11 +78,16 @@
   </details>
 </main>
 <script>
-// Test switch ?compat=1: hide JSPI so wllama takes its Safari path (the compat build) even in Chrome/Firefox.
-if (new URLSearchParams(location.search).get('compat') === '1') { try { WebAssembly.Suspending = undefined; } catch (e) {} }
+// wllama picks its fast build when JSPI and memory64 look available. Its memory64 test only creates a 64-bit Memory
+// object, which iOS Safari 27 allows while still refusing to COMPILE a memory64 module ("Memory64 is not enabled",
+// ayourtch's iPhone, 2026-10-24). So validate a real 13-byte module that declares 64-bit memory; if the browser
+// rejects it, hide JSPI, which makes wllama take its compat build (no memory64). ?compat=1 forces the same path.
+window.__mem64Compiles = (() => { try { return WebAssembly.validate(new Uint8Array([0,97,115,109,1,0,0,0,5,3,1,4,1])); } catch (e) { return false; } })();
+window.__forceCompat = new URLSearchParams(location.search).get('compat') === '1' || !window.__mem64Compiles;
+if (window.__forceCompat) { try { WebAssembly.Suspending = undefined; } catch (e) {} }
 </script>
 <script type="module">
-import { Wllama } from './esm/index.js?v=p4b';
+import { Wllama } from './esm/index.js?v=p4c';
 
 // Split with llama-gguf-split (GitHub refuses files over 100 MB); wllama finds the second part from the first's name.
 const MODEL = new URL('./model/supra-rust-phase4-q8_0-00001-of-00002.gguf', location.href).href;
@@ -119,10 +124,10 @@ addEventListener('error', (e) => log('ERROR (page)', e.message));
 addEventListener('unhandledrejection', (e) => log('ERROR (promise)', e.reason));
 const mem64 = (() => { try { new WebAssembly.Memory({ address: 'i64', initial: 1n }); return true; } catch { return false; } })();
 log(`browser: ${navigator.userAgent}`);
-log(`JSPI ${!!WebAssembly.Suspending}, memory64 ${mem64}, crossOriginIsolated ${self.crossOriginIsolated}, cores ${navigator.hardwareConcurrency}`);
+log(`JSPI ${!!WebAssembly.Suspending}, memory64 object ${mem64}, memory64 module compiles ${window.__mem64Compiles}, crossOriginIsolated ${self.crossOriginIsolated}, cores ${navigator.hardwareConcurrency}`);
 
-const wllama = new Wllama({ default: './esm/wasm/wllama.wasm?v=p4b' }, { logger });
-if (params.get('compat') === '1') { wllama.setCompat('default', 'firefox_safari'); log('compat build forced (?compat=1, JSPI hidden)'); }
+const wllama = new Wllama({ default: './esm/wasm/wllama.wasm?v=p4c' }, { logger });
+if (window.__forceCompat) { wllama.setCompat('default', 'firefox_safari'); log(params.get('compat') === '1' ? 'compat build forced (?compat=1)' : 'compat build: this browser cannot compile memory64 modules'); }
 if (params.get('clear') === '1') { await wllama.cacheManager.clear(); log('model cache cleared (?clear=1)'); }
 let abort = null;
 
